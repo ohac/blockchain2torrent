@@ -85,5 +85,5 @@ coinids.each do |coinid|
       resume.puts
     end
   end
-  update_torrent(coin, endblk, state['filesize'], bootfile)
+  update_torrent(coin, state['blocks'], state['filesize'], bootfile)
 end
