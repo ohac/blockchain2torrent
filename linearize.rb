@@ -2,12 +2,15 @@
 $LOAD_PATH.unshift File.dirname(__FILE__)
 require 'bitcoin_rpc'
 
-def sub(d, start, depth, bootstrap, minconf, netmagic)
+def sub(d, start, depth, bootstrap)
+  netmagic = d['netmagic']
   netmagicbin = [netmagic].pack('H*')
   uri = "http://#{d['user']}:#{d['password']}@#{d['host']}:#{d['port']}"
   rpc = BitcoinRPC.new(uri)
   info = rpc.getinfo
   blocks = info['blocks']
+  minconf = d['minconf'] || 6
+  blocks -= minconf
   (start..depth).each do |i|
     puts i if i % 1000 == 0
     height = i
@@ -25,13 +28,7 @@ config = YAML.load_file('config.yml')
 coinids = config['coins'].keys.sort_by(&:to_s)
 coinids.each do |coinid|
   coin = config['coins'][coinid]
-  user = coin['user']
-  password = coin['password']
-  host = coin['host']
-  port = coin['port']
   name = coin['name']
-  minconf = coin['minconf'] || 6
-  netmagic = coin['netmagic']
   bootfile = "#{name}_bootstrap.dat"
   resumefile = "#{bootfile}.resume"
   File.open(bootfile, "ab") do |bootstrap|
@@ -40,13 +37,8 @@ coinids.each do |coinid|
       state = JSON.parse(json)
     end
     start = state ? state['blocks'] + 1 : 0
-    endblk = start + 10000
-    depth = sub({
-      'user' => user,
-      'password' => password,
-      'host' => host,
-      'port' => port,
-    }, start, endblk, bootstrap, minconf, netmagic)
+    endblk = start + 2000
+    depth = sub(coin, start, endblk, bootstrap)
     File.open(resumefile, "w") do |resume|
       resume.write(depth.to_json)
       resume.puts
