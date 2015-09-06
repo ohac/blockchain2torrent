@@ -5,4 +5,4 @@ coins:
     host: 127.0.0.1
     port: 9512
     name: Sha1coin
-    netmagic: fbc0b6bd
+    netmagic: fbc0b6db
