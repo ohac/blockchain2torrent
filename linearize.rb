@@ -2,7 +2,7 @@
 $LOAD_PATH.unshift File.dirname(__FILE__)
 require 'bitcoin_rpc'
 
-def sub(d, start, depth, bootstrap)
+def sub(d, start, depth, bootstrap, filesize)
   netmagic = d['netmagic']
   netmagicbin = [netmagic].pack('H*')
   uri = "http://#{d['user']}:#{d['password']}@#{d['host']}:#{d['port']}"
@@ -18,10 +18,12 @@ def sub(d, start, depth, bootstrap)
     rawblock = rpc.getblock(hash, false)
     rawblock = [rawblock].pack("H*")
     bootstrap.write(netmagicbin)
-    bootstrap.write([rawblock.size].pack('V'))
+    s = rawblock.size
+    bootstrap.write([s].pack('V'))
     bootstrap.write(rawblock)
+    filesize += 8 + s
   end
-  {'blocks' => depth}
+  {'blocks' => depth, 'filesize' => filesize}
 end
 
 config = YAML.load_file('config.yml')
@@ -31,14 +33,17 @@ coinids.each do |coinid|
   name = coin['name']
   bootfile = "#{name}_bootstrap.dat"
   resumefile = "#{bootfile}.resume"
+  start = 0
+  filesize = File.size(bootfile) rescue 0
+  if File.exist?(resumefile)
+    json = File.open(resumefile, "r"){|fd|fd.read}
+    state = JSON.parse(json)
+    start = state['blocks'] + 1
+    filesize = state['size'] || filesize
+  end
   File.open(bootfile, "ab") do |bootstrap|
-    if File.exist?(resumefile)
-      json = File.open(resumefile, "r"){|fd|fd.read}
-      state = JSON.parse(json)
-    end
-    start = state ? state['blocks'] + 1 : 0
     endblk = start + 2000
-    depth = sub(coin, start, endblk, bootstrap)
+    depth = sub(coin, start, endblk, bootstrap, filesize)
     File.open(resumefile, "w") do |resume|
       resume.write(depth.to_json)
       resume.puts
