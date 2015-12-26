@@ -1,4 +1,11 @@
 coins:
+  monacoin:
+    user: someuser
+    password: somepassword
+    host: 127.0.0.1
+    port: 9402
+    name: Monacoin
+    netmagic: fbc0b6db
   sha1coin:
     user: someuser
     password: somepassword
