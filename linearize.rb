@@ -4,15 +4,15 @@ require 'bitcoin_rpc'
 require 'digest/sha1'
 require 'bencode'
 
-def sub(d, start, depth, bootstrap, filesize)
+def sub(d, start, bootstrap, filesize)
   netmagic = d['netmagic']
   netmagicbin = [netmagic].pack('H*')
   uri = "http://#{d['user']}:#{d['password']}@#{d['host']}:#{d['port']}"
   rpc = BitcoinRPC.new(uri)
   info = rpc.getinfo
-  blocks = info['blocks']
+  depth = info['blocks']
   minconf = d['minconf'] || 6
-  blocks -= minconf
+  depth -= minconf
   (start..depth).each do |i|
     puts i if i % 1000 == 0
     height = i
@@ -25,6 +25,7 @@ def sub(d, start, depth, bootstrap, filesize)
     bootstrap.write(rawblock)
     filesize += 8 + s
   end
+  puts depth
   {'blocks' => depth, 'filesize' => filesize}
 end
 
@@ -77,9 +78,8 @@ coinids.each do |coinid|
     start = state['blocks'] + 1
     filesize = state['size'] || filesize
   end
-  endblk = start + 2000
   File.open(bootfile, "ab") do |bootstrap|
-    state = sub(coin, start, endblk, bootstrap, filesize)
+    state = sub(coin, start, bootstrap, filesize)
     File.open(resumefile, "w") do |resume|
       resume.write(state.to_json)
       resume.puts
